@@ -1,0 +1,10 @@
+nItemsPorTransacao: 5
+nTransacoes: 5
+suporte_minimo: 3
+Matriz Entrada
+#0	#1	#2	#3	#4	
+1	1	1	0	0	
+1	0	1	1	1	
+0	0	1	1	0	
+1	0	1	1	1	
+1	1	1	1	0	
