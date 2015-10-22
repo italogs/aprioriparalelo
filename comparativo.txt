@@ -1,0 +1,44 @@
+Itemset tamanho: 1
+Quantidade de novos conjuntos: 5
+Quantidade de conjuntos frequentes: 4
+
+Itemset tamanho: 2
+Quantidade novos candidatos: 6
+Eliminado -> itemset 0 1 frequencia: 2
+Eliminado -> itemset 0 4 frequencia: 2
+Quantidade de conjuntos frequentes: 4
+
+
+Itemset tamanho: 3
+Quantidade novos candidatos: 1
+Quantidade de conjuntos frequentes: 1
+
+
+Itemset tamanho: 4
+Quantidade novos candidatos: 0
+Quantidade de conjuntos frequentes: 0
+
+
+Tempo Total de execucao = 0.0001090000
+Itemset tamanho: 1
+Quantidade de novos conjuntos: 5
+Quantidade de conjuntos frequentes: 4
+
+Itemset tamanho: 2
+Quantidade novos candidatos: 6
+Eliminado -> itemset 0 1 frequencia: 2
+Eliminado -> itemset 0 4 frequencia: 2
+Quantidade de conjuntos frequentes: 4
+
+
+Itemset tamanho: 3
+Quantidade novos candidatos: 1
+Quantidade de conjuntos frequentes: 1
+
+
+Itemset tamanho: 4
+Quantidade novos candidatos: 0
+Quantidade de conjuntos frequentes: 0
+
+
+Tempo Total de execucao = 0.0001870000
