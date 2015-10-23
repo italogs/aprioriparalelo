@@ -9,7 +9,3 @@ compilaseq:
 
 exec_sequencial:
 	./apriori_sequencial > comparativo.txt
-
-
-#compile: 
-#	g++ -lm -W -Wall -ansi  -Wno-long-long -pedantic -Werror main.cpp -o exec 
