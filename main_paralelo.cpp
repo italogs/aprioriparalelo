@@ -84,7 +84,7 @@ int main(int argc,char *argv[]){
 	int matriz[nTransacoes][nItemsPorTransacao];
 	int vet1[nItemsPorTransacao],vet2[nItemsPorTransacao];
 
-	omp_set_num_threads(nthreads);
+	// omp_set_num_threads(nthreads);
 
 	for(int i = 0 ; i < nTransacoes ; i++){
 		for(int j = 0 ; j < nItemsPorTransacao ; j++) {
@@ -113,10 +113,10 @@ int main(int argc,char *argv[]){
     for(int i = 0 ; i < nItemsPorTransacao ; i++){
     	frequencia = 0;
 
-    	#pragma omp parallel for reduction(+:frequencia)
+    	// #pragma omp parallel for reduction(+:frequencia)
 		for(int j = 0 ; j < nTransacoes  ; j++) {
 			if (matriz[j][i] > 0 ) 
-				frequencia+=1;// matriz[j][i];
+				frequencia+=1;
 		}
 		char temp[2] = {i+48};
 		temp[1]='\0';
@@ -154,10 +154,12 @@ int main(int argc,char *argv[]){
 				int  frequencia = 0;
 				if (tamanhoItemset == 2) {
 					
+					// #pragma omp parallel for reduction(+:frequencia)
 					for (int i = 0; i < nTransacoes; i++) {
 						if(matriz[i][atoi(it->first.c_str())]  > 0  && matriz[i][atoi(it2->first.c_str())]  > 0)
 							frequencia++;
 					}
+					
 					novosCandidatos.insert(novosCandidatos.begin(),pair<string,int>(it->first + " " + it2->first,frequencia));
 					
 				} else {//tamanhoItemset > 2
@@ -177,7 +179,7 @@ int main(int argc,char *argv[]){
 							}
 
 						}
-						#pragma omp parallel for reduction(+:frequencia)
+						// #pragma omp parallel for reduction(+:frequencia)
 						for (int i = 0; i < nTransacoes; i++) {
 							if(vet1[i] > 0 ) frequencia++;
 						}
@@ -207,6 +209,8 @@ int main(int argc,char *argv[]){
 	}
 	finaliza_relogio();
 	arquivo_log << "Tempo de execucao: "<<delta << " segundos" << endl;	
+		arquivo_log.close();
+	arquivo_saida.close();
 	return 0;
 }
 
