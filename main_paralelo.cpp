@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <fstream>
 #include <sys/time.h>
-
+#include <sstream>
 #include <omp.h>
 // #include <mpi.h>
 
@@ -19,197 +19,296 @@
 
 using namespace std;
 
-struct timeval start, end;
+struct 
+timeval start, end;
 double delta = 0.0;
-void inicia_relogio() {
+
+static void inicia_relogio() {
 	gettimeofday(&start, NULL);
 }
 
-void finaliza_relogio() {
+static void finaliza_relogio() {
 	gettimeofday(&end, NULL);
 	delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
 	end.tv_usec - start.tv_usec) / 1.e6;
-
-	printf("Tempo Total de execucao = %12.10f\n",delta);	
+	printf("Tempo Total de execucao = %12.10f\n\n\n",delta);	
 }	
 
-string subStrPrincipal(string str){
+static string IntToString (int a) {
+    ostringstream temp;
+    temp << a;
+    return temp.str();
+}
+
+static string subStrPrincipal(string str){
 	return str.substr(0,str.find_last_of(" "));
 }
 
-string getUltimoItem(string str){
-	return str.substr(str.find_last_of(" "));
+static string combinaRotulos(string s1,string s2, int itemset) {
+	int *vet =  new int[itemset];
+	register char *dup = strdup(s1.c_str()),*token = strtok(dup," ");
+	register int i = 0, j = 0;
+	while(token) {
+		vet[i] = atoi(token);
+		i++;
+		token = strtok(NULL," ");
+	}
+	free(dup);
+	dup = strdup(s2.c_str());
+	token = strtok(dup," ");
+	for ( j = 0; j < itemset-2 ; j++) { 
+		token = strtok(NULL," ");
+	}
+	vet[i] = atoi(token);
+	free(dup);
+
+	sort(vet,vet+itemset);
+	string novo_rotulo = IntToString(vet[0]);
+	
+	for(i = 1;i<itemset;i++)
+		novo_rotulo += " "+ IntToString(vet[i]);
+	delete[] vet;
+	return novo_rotulo;
 }
 
-int getItemPorPos(string str,int pos){
 
+static int getItemPorPos(string str,unsigned pos){
 	if(pos == 0) {
-		for (int i = 0; i < str.length(); i++) {
+		for (unsigned i = 0; i < str.length(); i++) {
 			if(str[i] == ' ')
 				return atoi(  str.substr(0,i).c_str()  );
 		}
 	}
-	int cont = 0 ;
-	for (int i = 0; i < str.length(); i++) {
+	unsigned cont = 0 , j;
+	for (unsigned i = 0; i < str.length(); i++) {
 		if(str[i] == ' ') cont++;
 		if(cont == pos) {
-			int j = i;
+			j = i;
 			while(str[j] != ' ') j++;
 			return atoi(   str.substr(i+1,j).c_str()    );
 		}
 	}
-	cout<<"Erro na funcao"<<endl;
 	return -1;
 }
 
+static void escreveConjuntoArquivo(map<string,unsigned int> *candidatos, ofstream &arquivo_saida,int tamanhoItemset) {
+	arquivo_saida << "Items sets (L"<<tamanhoItemset<<")"<<endl;
+	arquivo_saida <<"Quantidade novos Conjuntos: "<< candidatos->size() <<endl;
+	arquivo_saida << "{ ";
+	map<string,unsigned int>::iterator it_fim = candidatos->end() ;
+	for (map<string,unsigned int>::iterator it = candidatos->begin(); it != candidatos->end(); ++it) {
+		arquivo_saida << "{"<<it->first<<"} ";
+	}
+	arquivo_saida << "}"<<endl;
+}
+
+int naoAchouSubConjunto = 0;
+static void subset(int *arr, int *data, int start, int end, int index, int r,map<string,unsigned int> *candidatos){
+    register int j, i;
+    if (index == r) {
+    	string subconjunto = IntToString(data[0]);
+        for (j = 1; j < r; j++)
+        	subconjunto += " "+IntToString(data[j]);
+        if(candidatos->find(subconjunto) == candidatos->end())
+        	naoAchouSubConjunto = 1;
+        return;
+    }
+
+    for (i = start; i <= end && end - i + 1 >= r - index; i++) {
+        data[index] = arr[i];
+        subset(arr, data, i+1, end, index+1, r,candidatos);
+    }
+}
+
+static map<string,unsigned int> *eliminarSubconjuntosNaoFrequentes(map<string,unsigned int> *novosCandidatos,map<string,unsigned int> *candidatos,int tamanhoItemset){
+	register char *dup,*token;
+	int *vetNovosCandidatos = new int[tamanhoItemset],*vetSubSet = new int[tamanhoItemset-1];
+	register unsigned int posCandidato = 0;
+	map<string,unsigned int>::iterator it_fim = novosCandidatos->end() ;
+	for(map<string,unsigned int>::iterator it = novosCandidatos->begin() ; it != it_fim ; ) {
+		posCandidato = 0;
+		dup = strdup((it->first).c_str());
+		token = strtok(dup," ");
+
+		while(token) {
+			vetNovosCandidatos[posCandidato++] = atoi(token);
+			token = strtok(NULL," ");
+		}
+		naoAchouSubConjunto = 0;
+		subset(vetNovosCandidatos, vetSubSet, 0, tamanhoItemset-1, 0, tamanhoItemset-1,candidatos);
+		if(naoAchouSubConjunto)
+			novosCandidatos->erase(it++);
+		else
+			++it;
+		free(dup);
+	}
+	return novosCandidatos;
+}
 
 int main(int argc,char *argv[]){
 
-	fstream arquivo_entrada("entrada_paralelo.data");
+	if(argc != 4) {
+		printf("Parametros incompletos \n");
+		return 0;
+	}
+
+	bool habilitar_log = true;
+	bool habilitar_arquivo_saida = true;
+
+	register unsigned int suporte_minimo = atoi(argv[1]);
+	fstream arquivo_entrada(argv[2]);
 
 	ofstream arquivo_saida("saida_paralelo.data");
 	ofstream arquivo_log("log_paralelo.data");
-	string linha;
+	string transacao;
+	unsigned int n_threads = atoi(argv[3]);
 
-	arquivo_entrada >> linha;
-	int nItemsPorTransacao = atoi(linha.c_str());
-	arquivo_entrada >> linha;
-	int nTransacoes = atoi(linha.c_str());
-	arquivo_entrada >> linha;
-	int suporte_minimo = atoi(linha.c_str());
-	arquivo_entrada >> linha;
-	int nthreads = atoi(linha.c_str());
-	arquivo_log << "nItemsPorTransacao: " << nItemsPorTransacao << endl<<  "nTransacoes: " << nTransacoes<<endl<<"Suporte Minimo: "<<suporte_minimo<<endl<<"Numero de threads: "<<nthreads<<endl;
-	arquivo_log << "Matriz Entrada"<<endl;
-	int matriz[nTransacoes][nItemsPorTransacao];
-	int vet1[nItemsPorTransacao],vet2[nItemsPorTransacao];
+	register unsigned tamanhoItemset = 1;
+ 	map<string,unsigned int> *candidatos = new map<string,unsigned int>;
+ 	map<string,unsigned int>::iterator it, it_fim;
 
-	// omp_set_num_threads(nthreads);
+	register unsigned int frequencia = 0 , it_presente = 0,it2_presente = 0, pos =0, qtd_items;
+	int item;
+	register char *dup = NULL, *token = NULL;
 
-	for(int i = 0 ; i < nTransacoes ; i++){
-		for(int j = 0 ; j < nItemsPorTransacao ; j++) {
-			arquivo_entrada >> linha;
-			matriz[i][j] = atoi(linha.c_str());	
+ 	inicia_relogio();
+
+ 	while(getline(arquivo_entrada, transacao)){
+		dup = strdup(transacao.c_str());
+		token = strtok(dup," ");
+		while(token) {
+			if(candidatos->find(token) == candidatos->end()) {
+				string itemset(token);
+				candidatos->insert(candidatos->begin(),pair<string,unsigned int>(itemset,1));
+			} else {
+				it = candidatos->find(token);
+				it->second++;
+			}
+			token = strtok(NULL," ");
+		}
+		free(dup);
+	}
+
+
+	it_fim = candidatos->end();
+	for(map<string,unsigned int>::iterator it = candidatos->begin() ; it != it_fim;  ) {
+		if(it->second < suporte_minimo) {
+			candidatos->erase(it++);
+		} else{
+			++it;
 		}
 	}
-
-	for (int i = 0; i < nTransacoes; i++) {
-		arquivo_log << "#"<<i<<"\t";
+	cout<<"Programa Paralelo"<<endl;
+	cout<<"Suporte:"<<suporte_minimo<<endl;
+	cout<<"n_Threads:"<<n_threads<<endl;
+	cout<<"Itemset tamanho:"<<tamanhoItemset<<endl;
+	cout<<"Quantidade de novos conjuntos:"<<candidatos->size()<<endl;
+	if(habilitar_log) {
+		arquivo_log << "Suporte:"<<suporte_minimo<<endl;
+		arquivo_log << "n_Threads:"<<n_threads<<endl;
+		arquivo_log << "Itemset tamanho:"<<tamanhoItemset<<endl;
+		arquivo_log << "Quantidade de novos conjuntos: "<<candidatos->size()<<endl;
 	}
+	if(habilitar_arquivo_saida){
+		arquivo_saida << "Suporte minimo:"<<suporte_minimo<<endl;
+	}
+	map<string,unsigned int> *novosCandidatos;
+	string conj1, conj2;
 
-	arquivo_log << endl;
-	for(int i = 0 ; i < nTransacoes ; i++){
-		for(int j = 0 ; j < nItemsPorTransacao ; j++) {
-			arquivo_log << matriz[i][j] <<"\t";
+	while(candidatos->size() > 0) {
+		if(habilitar_arquivo_saida){
+			escreveConjuntoArquivo(candidatos,arquivo_saida,tamanhoItemset);
 		}
-		arquivo_log << endl;
-	}
-
-	int tamanhoItemset = 1;
- 	map<string,int> candidatos;
- 	int frequencia = 0;
-
-	inicia_relogio();
-    for(int i = 0 ; i < nItemsPorTransacao ; i++){
-    	frequencia = 0;
-
-    	// #pragma omp parallel for reduction(+:frequencia)
-		for(int j = 0 ; j < nTransacoes  ; j++) {
-			if (matriz[j][i] > 0 ) 
-				frequencia+=1;
-		}
-		char temp[2] = {i+48};
-		temp[1]='\0';
-		string itemset(temp);
-		candidatos.insert(candidatos.begin(),pair<string,int>(itemset,frequencia));
-	}
-
-	cout<<"Itemset tamanho: "<<tamanhoItemset<<endl;
-	cout<<"Quantidade de novos conjuntos: "<<candidatos.size()<<endl;
-	arquivo_saida << "Items sets (L"<<tamanhoItemset<<")"<<endl;
-	arquivo_saida << "{ ";
-	for (map<string,int>::iterator it = candidatos.begin(); it != candidatos.end(); ++it) {
-		if(it->second >= suporte_minimo) {
-			arquivo_saida << "{"<<it->first<<"} ";
-		} else {
-			candidatos.erase(it->first);
-		}
-	}
-	arquivo_saida << "}"<<endl;
-	
-	cout<<"Quantidade de conjuntos frequentes: "<<candidatos.size()<<endl<<endl;
-	map<string,int> novosCandidatos;
-	
-	while(candidatos.size() > 0 ) {
-
+		novosCandidatos = new map<string,unsigned int>;
 		tamanhoItemset++;
 		//lacos para gerar as combinacoes
+		cout<<"Quantidade novos Conjuntos: "<< candidatos->size() <<endl;
 		cout<<"Itemset tamanho: "<<tamanhoItemset<<endl;
-		for(map<string,int>::iterator it = candidatos.begin() ; it != candidatos.end() ; ++it) {
-			map<string,int>::iterator itTemp = it;
+		it_fim = candidatos->end();
+		for(map<string,unsigned int>::iterator it = candidatos->begin() ; it != it_fim ; ++it) {
+			map<string,unsigned int>::iterator itTemp = it;
 			itTemp++;
-			for(map<string,int>::iterator it2 = itTemp ; it2 != candidatos.end() ; ++it2) {
-				string conj1(it->first); 
-				string conj2(it2->first);
-				int  frequencia = 0;
+			for(map<string,unsigned int>::iterator it2 = itTemp ; it2 != it_fim ; ++it2) {
+				conj1 = it->first; 
+				conj2 = it2->first;
+
+				arquivo_entrada.clear();
+				arquivo_entrada.seekg(0);
+
+				frequencia = 0;
+				string novoCandidato;
 				if (tamanhoItemset == 2) {
-					
-					// #pragma omp parallel for reduction(+:frequencia)
-					for (int i = 0; i < nTransacoes; i++) {
-						if(matriz[i][atoi(it->first.c_str())]  > 0  && matriz[i][atoi(it2->first.c_str())]  > 0)
-							frequencia++;
-					}
-					
-					novosCandidatos.insert(novosCandidatos.begin(),pair<string,int>(it->first + " " + it2->first,frequencia));
-					
-				} else {//tamanhoItemset > 2
-					if(subStrPrincipal(it->first) == subStrPrincipal(it2->first)){
-						string novoCandidato = subStrPrincipal(it->first) + getUltimoItem(it->first) + getUltimoItem(it2->first);
-						// #pragma omp parallel for
-						for (int i = 0; i < nTransacoes; i++) {
-							vet1[i] = matriz[i][getItemPorPos(novoCandidato,0)];
-						}
 
-						for (int k = 1; k < tamanhoItemset; k++) {
-							int item = getItemPorPos(novoCandidato,k);
-							// #pragma omp parallel for
-							for (int i = 0; i < nTransacoes; i++) {
-								if(vet1[i] > 0 && matriz[i][item] > 0) vet1[i] = 1;
-								else vet1[i] = 0;
+					while(getline(arquivo_entrada, transacao)){
+						dup = strdup(transacao.c_str());
+						token = strtok(dup," ");
+						it_presente = it2_presente = 0;
+						while(token) {
+							if(!it_presente && strcmp(it->first.c_str(),token) == 0) 
+								it_presente = 1;
+							if(!it2_presente && strcmp(it2->first.c_str(),token) == 0)
+								it2_presente = 1;
+							if(it_presente == 1 && it2_presente == 1){
+								frequencia++;
+								break;
 							}
-
+							token = strtok(NULL," ");
 						}
-						// #pragma omp parallel for reduction(+:frequencia)
-						for (int i = 0; i < nTransacoes; i++) {
-							if(vet1[i] > 0 ) frequencia++;
-						}
-						novosCandidatos.insert(novosCandidatos.begin(),pair<string,int>(novoCandidato,frequencia));
+						free(dup);
 					}
+
+					novoCandidato = it->first + " " + it2->first;
+				} else {//tamanhoItemset > 2
+					if(subStrPrincipal(it->first) == subStrPrincipal(it2->first)) {
+						novoCandidato = combinaRotulos(it->first,it2->first,tamanhoItemset);
+						//frequencia deste conjunto						
+						while(getline(arquivo_entrada, transacao)){
+							dup = strdup(transacao.c_str());
+							token = strtok(dup," ");
+							pos = 0;
+							item = getItemPorPos(novoCandidato,pos);
+							qtd_items = 0;
+							while(token) {
+								if(item == atoi(token)){
+									qtd_items++;
+									item = getItemPorPos(novoCandidato,++pos);
+									if(item == -1)
+										break;
+									dup = strdup(transacao.c_str());
+									token = strtok(dup," ");
+								} else {
+									token = strtok(NULL," ");
+								}
+							}
+							free(dup);
+							if(qtd_items == tamanhoItemset) {
+								frequencia++;
+							}
+						}
+					}
+				}
+				if(frequencia >= suporte_minimo) {
+					novosCandidatos->insert(novosCandidatos->begin(),pair<string,unsigned int>(novoCandidato,frequencia));
 				}
 			}
 		}
+		if(tamanhoItemset > 2)
+			novosCandidatos = eliminarSubconjuntosNaoFrequentes(novosCandidatos, candidatos, tamanhoItemset);
 
-		cout<<"Quantidade novos candidatos: "<<novosCandidatos.size()<<endl;
-		// selecionando candidatos
-		arquivo_saida << "Items sets (L"<<tamanhoItemset<<")"<<endl;
-		arquivo_saida << "{ ";
-		candidatos.clear();
+		delete candidatos;
+		candidatos = novosCandidatos;
 
-		for (map<string,int>::iterator it = novosCandidatos.begin(); it != novosCandidatos.end(); ++it) {
-			if(it->second >= suporte_minimo) {
-				candidatos.insert(candidatos.begin(),pair<string,int>(it->first,it->second));
-				arquivo_saida << "{"<<it->first<<"} ";
-			} else {
-				cout<<"Eliminado -> itemset "<<it->first<<" frequencia: "<<it->second<<endl;
-			}
-		}
-		arquivo_saida << "}"<<endl;
-		novosCandidatos.clear();
-		cout<<"Quantidade de conjuntos frequentes: "<<candidatos.size()<<endl<<endl<<endl;	
+		novosCandidatos = NULL;
+
+		cout<<"Quantidade de conjuntos frequentes: "<<candidatos->size()<<endl<<endl;
 	}
-	finaliza_relogio();
-	arquivo_log << "Tempo de execucao: "<<delta << " segundos" << endl;	
-		arquivo_log.close();
+
+	finaliza_relogio();	
+	if(habilitar_log){
+		arquivo_log << "Tempo de execucao: "<<delta << " segundos" << endl;
+	}
+	arquivo_entrada.close();
+	arquivo_log.close();
 	arquivo_saida.close();
 	return 0;
 }

@@ -1,44 +1,47 @@
-Itemset tamanho: 1
-Quantidade de novos conjuntos: 5
-Quantidade de conjuntos frequentes: 4
-
+Programa Sequencial
+Suporte:5
+Itemset tamanho:1
+Quantidade de novos conjuntos: 63
+Quantidade novos Conjuntos: 63
 Itemset tamanho: 2
-Quantidade novos candidatos: 6
-Eliminado -> itemset 0 1 frequencia: 2
-Eliminado -> itemset 0 4 frequencia: 2
-Quantidade de conjuntos frequentes: 4
+Quantidade de conjuntos frequentes: 54
 
-
+Quantidade novos Conjuntos: 54
 Itemset tamanho: 3
-Quantidade novos candidatos: 1
-Quantidade de conjuntos frequentes: 1
+Quantidade de conjuntos frequentes: 18
 
-
+Quantidade novos Conjuntos: 18
 Itemset tamanho: 4
-Quantidade novos candidatos: 0
+Quantidade de conjuntos frequentes: 3
+
+Quantidade novos Conjuntos: 3
+Itemset tamanho: 5
 Quantidade de conjuntos frequentes: 0
 
+Tempo Total de execucao = 0.2882450000
 
-Tempo Total de execucao = 0.0001090000
-Itemset tamanho: 1
-Quantidade de novos conjuntos: 5
-Quantidade de conjuntos frequentes: 4
 
+Programa Paralelo
+Suporte:5
+n_Threads:3
+Itemset tamanho:1
+Quantidade de novos conjuntos:63
+Quantidade novos Conjuntos: 63
 Itemset tamanho: 2
-Quantidade novos candidatos: 6
-Eliminado -> itemset 0 1 frequencia: 2
-Eliminado -> itemset 0 4 frequencia: 2
-Quantidade de conjuntos frequentes: 4
+Quantidade de conjuntos frequentes: 54
 
-
+Quantidade novos Conjuntos: 54
 Itemset tamanho: 3
-Quantidade novos candidatos: 1
-Quantidade de conjuntos frequentes: 1
+Quantidade de conjuntos frequentes: 18
 
-
+Quantidade novos Conjuntos: 18
 Itemset tamanho: 4
-Quantidade novos candidatos: 0
+Quantidade de conjuntos frequentes: 3
+
+Quantidade novos Conjuntos: 3
+Itemset tamanho: 5
 Quantidade de conjuntos frequentes: 0
 
+Tempo Total de execucao = 0.2898270000
 
-Tempo Total de execucao = 0.0001870000
+

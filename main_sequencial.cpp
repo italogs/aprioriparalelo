@@ -29,7 +29,7 @@ static void finaliza_relogio() {
 	gettimeofday(&end, NULL);
 	delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
 	end.tv_usec - start.tv_usec) / 1.e6;
-	printf("Tempo Total de execucao = %12.10f\n",delta);	
+	printf("Tempo Total de execucao = %12.10f\n\n\n",delta);	
 }	
 
 static string IntToString (int a) {
@@ -151,7 +151,7 @@ int main(int argc,char *argv[]){
 		return 0;
 	}
 
-	bool habilitar_log = false;
+	bool habilitar_log = true;
 	bool habilitar_arquivo_saida = true;
 
 	register unsigned int suporte_minimo = atoi(argv[1]);
@@ -195,16 +195,17 @@ int main(int argc,char *argv[]){
 			++it;
 		}
 	}
+	cout<<"Programa Sequencial"<<endl;
 	cout<<"Suporte:"<<suporte_minimo<<endl;
-	cout<<"Itemset tamanho: "<<tamanhoItemset<<endl;
+	cout<<"Itemset tamanho:"<<tamanhoItemset<<endl;
 	cout<<"Quantidade de novos conjuntos: "<<candidatos->size()<<endl;
 	if(habilitar_log) {
 		arquivo_log << "Suporte:"<<suporte_minimo<<endl;
-		arquivo_log << "Itemset tamanho: "<<tamanhoItemset<<endl;
-		arquivo_log << "Quantidade de novos conjuntos: "<<candidatos->size()<<endl;
+		arquivo_log << "Itemset tamanho:"<<tamanhoItemset<<endl;
+		arquivo_log << "Quantidade de novos conjuntos:"<<candidatos->size()<<endl;
 	}
 	if(habilitar_arquivo_saida){
-		arquivo_saida << "Suporte minimo: " << suporte_minimo<<endl;
+		arquivo_saida << "Suporte minimo:" << suporte_minimo<<endl;
 	}
 	map<string,unsigned int> *novosCandidatos;
 	string conj1, conj2;
@@ -301,7 +302,6 @@ int main(int argc,char *argv[]){
 	if(habilitar_log){
 		arquivo_log << "Tempo de execucao: "<<delta << " segundos" << endl;
 	}
-	
 	arquivo_entrada.close();
 	arquivo_log.close();
 	arquivo_saida.close();
