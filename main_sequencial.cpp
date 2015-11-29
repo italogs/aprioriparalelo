@@ -17,45 +17,35 @@
 
 using namespace std;
 
-
-
-
-struct timeval start, end;
+struct 
+timeval start, end;
 double delta = 0.0;
-void inicia_relogio() {
+
+static void inicia_relogio() {
 	gettimeofday(&start, NULL);
 }
 
-void finaliza_relogio() {
+static void finaliza_relogio() {
 	gettimeofday(&end, NULL);
 	delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
 	end.tv_usec - start.tv_usec) / 1.e6;
 	printf("Tempo Total de execucao = %12.10f\n",delta);	
 }	
 
-string IntToString (int a)
-{
+static string IntToString (int a) {
     ostringstream temp;
-    temp<<a;
+    temp << a;
     return temp.str();
 }
-string subStrPrincipal(string str){
+
+static string subStrPrincipal(string str){
 	return str.substr(0,str.find_last_of(" "));
 }
 
-string getUltimoItem(string str){
-	return str.substr(str.find_last_of(" "));
-}
-bool compstr(string &s1, string &s2) {
-	if(s1.compare(s2)>0){return 1;}
-	if(s1.compare(s2)<0){return -1;}
-	return 0;
-}
-string combinaRotulos(string s1,string s2, int itemset) {
+static string combinaRotulos(string s1,string s2, int itemset) {
 	int *vet =  new int[itemset];
-	char *dup = strdup(s1.c_str());
-	char *token = strtok(dup," ");
-	int i = 0, j = 0;
+	register char *dup = strdup(s1.c_str()),*token = strtok(dup," ");
+	register int i = 0, j = 0;
 	while(token) {
 		vet[i] = atoi(token);
 		i++;
@@ -80,18 +70,18 @@ string combinaRotulos(string s1,string s2, int itemset) {
 }
 
 
-int getItemPorPos(string str,unsigned pos){
+static int getItemPorPos(string str,unsigned pos){
 	if(pos == 0) {
 		for (unsigned i = 0; i < str.length(); i++) {
 			if(str[i] == ' ')
 				return atoi(  str.substr(0,i).c_str()  );
 		}
 	}
-	unsigned cont = 0 ;
+	unsigned cont = 0 , j;
 	for (unsigned i = 0; i < str.length(); i++) {
 		if(str[i] == ' ') cont++;
 		if(cont == pos) {
-			unsigned j = i;
+			j = i;
 			while(str[j] != ' ') j++;
 			return atoi(   str.substr(i+1,j).c_str()    );
 		}
@@ -99,19 +89,20 @@ int getItemPorPos(string str,unsigned pos){
 	return -1;
 }
 
-void escreveConjuntoArquivo(map<string,int> *candidatos, ofstream &arquivo_saida,int tamanhoItemset) {
+static void escreveConjuntoArquivo(map<string,unsigned int> *candidatos, ofstream &arquivo_saida,int tamanhoItemset) {
 	arquivo_saida << "Items sets (L"<<tamanhoItemset<<")"<<endl;
 	arquivo_saida <<"Quantidade novos Conjuntos: "<< candidatos->size() <<endl;
 	arquivo_saida << "{ ";
-	for (map<string,int>::iterator it = candidatos->begin(); it != candidatos->end(); ++it) {
+	map<string,unsigned int>::iterator it_fim = candidatos->end() ;
+	for (map<string,unsigned int>::iterator it = candidatos->begin(); it != candidatos->end(); ++it) {
 		arquivo_saida << "{"<<it->first<<"} ";
 	}
 	arquivo_saida << "}"<<endl;
 }
-int naoAchouSubConjunto = 0;
-void subset(int *arr, int *data, int start, int end, int index, int r,map<string,int> *candidatos){
-    int j, i;
 
+int naoAchouSubConjunto = 0;
+static void subset(int *arr, int *data, int start, int end, int index, int r,map<string,unsigned int> *candidatos){
+    register int j, i;
     if (index == r) {
     	string subconjunto = IntToString(data[0]);
         for (j = 1; j < r; j++)
@@ -127,10 +118,12 @@ void subset(int *arr, int *data, int start, int end, int index, int r,map<string
     }
 }
 
-map<string,int> *eliminarSubconjuntosNaoFrequentes(map<string,int> *novosCandidatos,map<string,int> *candidatos,int tamanhoItemset){
-	char *dup,*token;
-	int *vetNovosCandidatos = new int[tamanhoItemset],*vetSubSet = new int[tamanhoItemset-1], posCandidato = 0;
-	for(map<string,int>::iterator it = novosCandidatos->begin() ; it != novosCandidatos->end() ; ) {
+static map<string,unsigned int> *eliminarSubconjuntosNaoFrequentes(map<string,unsigned int> *novosCandidatos,map<string,unsigned int> *candidatos,int tamanhoItemset){
+	register char *dup,*token;
+	int *vetNovosCandidatos = new int[tamanhoItemset],*vetSubSet = new int[tamanhoItemset-1];
+	register unsigned int posCandidato = 0;
+	map<string,unsigned int>::iterator it_fim = novosCandidatos->end() ;
+	for(map<string,unsigned int>::iterator it = novosCandidatos->begin() ; it != it_fim ; ) {
 		posCandidato = 0;
 		dup = strdup((it->first).c_str());
 		token = strtok(dup," ");
@@ -145,8 +138,8 @@ map<string,int> *eliminarSubconjuntosNaoFrequentes(map<string,int> *novosCandida
 			novosCandidatos->erase(it++);
 		else
 			++it;
+		free(dup);
 	}
-
 	return novosCandidatos;
 }
 
@@ -161,28 +154,29 @@ int main(int argc,char *argv[]){
 	bool habilitar_log = false;
 	bool habilitar_arquivo_saida = true;
 
-	int suporte_minimo = atoi(argv[1]);
+	register unsigned int suporte_minimo = atoi(argv[1]);
 	fstream arquivo_entrada(argv[2]);
 	ofstream arquivo_saida("saida_sequencial.data");
 	ofstream arquivo_log("log_sequencial.data");
 	string transacao;
 
-	unsigned tamanhoItemset = 1;
- 	map<string,int> *candidatos = new map<string,int>;
- 	map<string,int>::iterator it;
+	register unsigned tamanhoItemset = 1;
+ 	map<string,unsigned int> *candidatos = new map<string,unsigned int>;
+ 	map<string,unsigned int>::iterator it, it_fim;
 
-	int frequencia = 0 , it_presente = 0,it2_presente = 0, pos =0 , item;
-	char *dup = NULL, *token = NULL;
+	register unsigned int frequencia = 0 , it_presente = 0,it2_presente = 0, pos =0, qtd_items;
+	int item;
+	register char *dup = NULL, *token = NULL;
 
  	inicia_relogio();
 
 	while(getline(arquivo_entrada, transacao)){
-		char *dup = strdup(transacao.c_str());
-		char *token = strtok(dup," ");
+		dup = strdup(transacao.c_str());
+		token = strtok(dup," ");
 		while(token) {
 			if(candidatos->find(token) == candidatos->end()) {
 				string itemset(token);
-				candidatos->insert(candidatos->begin(),pair<string,int>(itemset,1));
+				candidatos->insert(candidatos->begin(),pair<string,unsigned int>(itemset,1));
 			} else {
 				it = candidatos->find(token);
 				it->second++;
@@ -191,7 +185,10 @@ int main(int argc,char *argv[]){
 		}
 		free(dup);
 	}
-	for(map<string,int>::iterator it = candidatos->begin() ; it != candidatos->end();  ) {
+
+
+	it_fim = candidatos->end();
+	for(map<string,unsigned int>::iterator it = candidatos->begin() ; it != it_fim;  ) {
 		if(it->second < suporte_minimo) {
 			candidatos->erase(it++);
 		} else{
@@ -209,24 +206,25 @@ int main(int argc,char *argv[]){
 	if(habilitar_arquivo_saida){
 		arquivo_saida << "Suporte minimo: " << suporte_minimo<<endl;
 	}
-	map<string,int> *novosCandidatos;
-
+	map<string,unsigned int> *novosCandidatos;
+	string conj1, conj2;
 
 	while(candidatos->size() > 0) {
 		if(habilitar_arquivo_saida){
 			escreveConjuntoArquivo(candidatos,arquivo_saida,tamanhoItemset);
 		}
-		novosCandidatos = new map<string,int>;
+		novosCandidatos = new map<string,unsigned int>;
 		tamanhoItemset++;
 		//lacos para gerar as combinacoes
 		cout<<"Quantidade novos Conjuntos: "<< candidatos->size() <<endl;
 		cout<<"Itemset tamanho: "<<tamanhoItemset<<endl;
-		for(map<string,int>::iterator it = candidatos->begin() ; it != candidatos->end() ; ++it) {
-			map<string,int>::iterator itTemp = it;
+		it_fim = candidatos->end();
+		for(map<string,unsigned int>::iterator it = candidatos->begin() ; it != it_fim ; ++it) {
+			map<string,unsigned int>::iterator itTemp = it;
 			itTemp++;
-			for(map<string,int>::iterator it2 = itTemp ; it2 != candidatos->end() ; ++it2) {
-				string conj1(it->first); 
-				string conj2(it2->first);
+			for(map<string,unsigned int>::iterator it2 = itTemp ; it2 != it_fim ; ++it2) {
+				conj1 = it->first; 
+				conj2 = it2->first;
 
 				arquivo_entrada.clear();
 				arquivo_entrada.seekg(0);
@@ -263,7 +261,7 @@ int main(int argc,char *argv[]){
 							token = strtok(dup," ");
 							pos = 0;
 							item = getItemPorPos(novoCandidato,pos);
-							unsigned qtd_items = 0;
+							qtd_items = 0;
 							while(token) {
 								if(item == atoi(token)){
 									qtd_items++;
@@ -284,20 +282,15 @@ int main(int argc,char *argv[]){
 					}
 				}
 				if(frequencia >= suporte_minimo) {
-					novosCandidatos->insert(novosCandidatos->begin(),pair<string,int>(novoCandidato,frequencia));
+					novosCandidatos->insert(novosCandidatos->begin(),pair<string,unsigned int>(novoCandidato,frequencia));
 				}
 			}
 		}
 		if(tamanhoItemset > 2)
 			novosCandidatos = eliminarSubconjuntosNaoFrequentes(novosCandidatos, candidatos, tamanhoItemset);
 
-
-
 		delete candidatos;
 		candidatos = novosCandidatos;
-
-
-
 
 		novosCandidatos = NULL;
 

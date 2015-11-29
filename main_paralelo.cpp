@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <cmath>
-#include <string>
+#include <string.h>
 #include <map>
 #include <vector>
 #include <iostream>

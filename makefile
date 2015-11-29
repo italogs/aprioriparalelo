@@ -7,7 +7,7 @@ exec_sequencial: compilaseq
 	./apriori_sequencial 5 basedados_short.data
 
 compilaseq:
-	g++ -lm main_sequencial.cpp -o apriori_sequencial -Wall -Werror -pedantic
+	g++ -lm main_sequencial.cpp -o apriori_sequencial -Wall -Werror -pedantic -O3
 
 
 	 # > comparativo.txt
