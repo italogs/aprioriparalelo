@@ -100,7 +100,7 @@ static void escreveConjuntoArquivo(map<string,unsigned int> *candidatos, ofstrea
 	arquivo_saida << "}"<<endl;
 }
 
-int naoAchouSubConjunto = 0;
+bool naoAchouSubConjunto = 0;
 static void subset(int *arr, int *data, int start, int end, int index, int r,map<string,unsigned int> *candidatos){
     register int j, i;
     if (index == r) {
@@ -146,28 +146,24 @@ static map<string,unsigned int> *eliminarSubconjuntosNaoFrequentes(map<string,un
 
 int main(int argc,char *argv[]){
 
-	if(argc != 3) {
-		printf("Parametros incompletos \n");
+	if(argc != 6) {
+		cout<<"Parametros incompletos"<<endl;
 		return 0;
 	}
-
-	bool habilitar_log = true;
-	bool habilitar_arquivo_saida = true;
-
-	register unsigned int suporte_minimo = atoi(argv[1]);
-	fstream arquivo_entrada(argv[2]);
+	bool habilitar_log = atoi(argv[1]);
+	bool habilitar_impressao = atoi(argv[2]);
+	bool habilitar_arquivo_saida = atoi(argv[3]);
+	register unsigned int suporte_minimo = atoi(argv[4]);
+	fstream arquivo_entrada(argv[5]);
 	ofstream arquivo_saida("saida_sequencial.data");
 	ofstream arquivo_log("log_sequencial.data");
 	string transacao;
-
 	register unsigned tamanhoItemset = 1;
  	map<string,unsigned int> *candidatos = new map<string,unsigned int>;
  	map<string,unsigned int>::iterator it, it_fim;
-
 	register unsigned int frequencia = 0 , it_presente = 0,it2_presente = 0, pos =0, qtd_items;
 	int item;
 	register char *dup = NULL, *token = NULL;
-
  	inicia_relogio();
 
 	while(getline(arquivo_entrada, transacao)){
@@ -186,7 +182,6 @@ int main(int argc,char *argv[]){
 		free(dup);
 	}
 
-
 	it_fim = candidatos->end();
 	for(map<string,unsigned int>::iterator it = candidatos->begin() ; it != it_fim;  ) {
 		if(it->second < suporte_minimo) {
@@ -196,9 +191,11 @@ int main(int argc,char *argv[]){
 		}
 	}
 	cout<<"Programa Sequencial"<<endl;
-	cout<<"Suporte:"<<suporte_minimo<<endl;
-	cout<<"Itemset tamanho:"<<tamanhoItemset<<endl;
-	cout<<"Quantidade de novos conjuntos: "<<candidatos->size()<<endl;
+	if(habilitar_impressao){
+		cout<<"Suporte:"<<suporte_minimo<<endl;
+		cout<<"Itemset tamanho:"<<tamanhoItemset<<endl;
+		cout<<"Quantidade de novos conjuntos: "<<candidatos->size()<<endl;
+	}
 	if(habilitar_log) {
 		arquivo_log << "Suporte:"<<suporte_minimo<<endl;
 		arquivo_log << "Itemset tamanho:"<<tamanhoItemset<<endl;
@@ -211,14 +208,16 @@ int main(int argc,char *argv[]){
 	string conj1, conj2;
 
 	while(candidatos->size() > 0) {
-		if(habilitar_arquivo_saida){
+		if(habilitar_arquivo_saida)
 			escreveConjuntoArquivo(candidatos,arquivo_saida,tamanhoItemset);
-		}
 		novosCandidatos = new map<string,unsigned int>;
 		tamanhoItemset++;
+		
+		if(habilitar_impressao){
+			cout<<"Quantidade novos Conjuntos: "<< candidatos->size() <<endl;
+			cout<<"Itemset tamanho: "<<tamanhoItemset<<endl;
+		}
 		//lacos para gerar as combinacoes
-		cout<<"Quantidade novos Conjuntos: "<< candidatos->size() <<endl;
-		cout<<"Itemset tamanho: "<<tamanhoItemset<<endl;
 		it_fim = candidatos->end();
 		for(map<string,unsigned int>::iterator it = candidatos->begin() ; it != it_fim ; ++it) {
 			map<string,unsigned int>::iterator itTemp = it;
@@ -271,20 +270,17 @@ int main(int argc,char *argv[]){
 										break;
 									dup = strdup(transacao.c_str());
 									token = strtok(dup," ");
-								} else {
+								} else
 									token = strtok(NULL," ");
-								}
 							}
 							free(dup);
-							if(qtd_items == tamanhoItemset) {
+							if(qtd_items == tamanhoItemset)
 								frequencia++;
-							}
 						}
 					}
 				}
-				if(frequencia >= suporte_minimo) {
+				if(frequencia >= suporte_minimo)
 					novosCandidatos->insert(novosCandidatos->begin(),pair<string,unsigned int>(novoCandidato,frequencia));
-				}
 			}
 		}
 		if(tamanhoItemset > 2)
@@ -294,14 +290,14 @@ int main(int argc,char *argv[]){
 		candidatos = novosCandidatos;
 
 		novosCandidatos = NULL;
-
-		cout<<"Quantidade de conjuntos frequentes: "<<candidatos->size()<<endl<<endl;
+		if(habilitar_impressao)
+			cout<<"Quantidade de conjuntos frequentes: "<<candidatos->size()<<endl<<endl;
 	}
 
 	finaliza_relogio();	
-	if(habilitar_log){
+	if(habilitar_log)
 		arquivo_log << "Tempo de execucao: "<<delta << " segundos" << endl;
-	}
+	
 	arquivo_entrada.close();
 	arquivo_log.close();
 	arquivo_saida.close();

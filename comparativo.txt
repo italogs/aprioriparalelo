@@ -18,30 +18,34 @@ Quantidade novos Conjuntos: 3
 Itemset tamanho: 5
 Quantidade de conjuntos frequentes: 0
 
-Tempo Total de execucao = 0.2882450000
+Tempo Total de execucao = 0.2982140000
 
 
 Programa Paralelo
 Suporte:5
-n_Threads:3
+n_Threads:4
 Itemset tamanho:1
 Quantidade de novos conjuntos:63
 Quantidade novos Conjuntos: 63
 Itemset tamanho: 2
-Quantidade de conjuntos frequentes: 54
+V_size:63
+Quantidade de conjuntos frequentes: 30
 
-Quantidade novos Conjuntos: 54
+Quantidade novos Conjuntos: 30
 Itemset tamanho: 3
-Quantidade de conjuntos frequentes: 18
+V_size:30
+Quantidade de conjuntos frequentes: 13
 
-Quantidade novos Conjuntos: 18
+Quantidade novos Conjuntos: 13
 Itemset tamanho: 4
+V_size:13
 Quantidade de conjuntos frequentes: 3
 
 Quantidade novos Conjuntos: 3
 Itemset tamanho: 5
+V_size:3
 Quantidade de conjuntos frequentes: 0
 
-Tempo Total de execucao = 0.2898270000
+Tempo Total de execucao = 0.1413620000
 
 

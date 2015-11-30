@@ -19,8 +19,7 @@
 
 using namespace std;
 
-struct 
-timeval start, end;
+struct timeval start, end;
 double delta = 0.0;
 
 static void inicia_relogio() {
@@ -102,7 +101,7 @@ static void escreveConjuntoArquivo(map<string,unsigned int> *candidatos, ofstrea
 	arquivo_saida << "}"<<endl;
 }
 
-int naoAchouSubConjunto = 0;
+bool naoAchouSubConjunto = 0;
 static void subset(int *arr, int *data, int start, int end, int index, int r,map<string,unsigned int> *candidatos){
     register int j, i;
     if (index == r) {
@@ -113,7 +112,6 @@ static void subset(int *arr, int *data, int start, int end, int index, int r,map
         	naoAchouSubConjunto = 1;
         return;
     }
-
     for (i = start; i <= end && end - i + 1 >= r - index; i++) {
         data[index] = arr[i];
         subset(arr, data, i+1, end, index+1, r,candidatos);
@@ -147,33 +145,34 @@ static map<string,unsigned int> *eliminarSubconjuntosNaoFrequentes(map<string,un
 
 int main(int argc,char *argv[]){
 
-	if(argc != 4) {
-		printf("Parametros incompletos \n");
+	if(argc != 7) {
+		cout<<"Parametros incompletos"<<endl;
 		return 0;
 	}
+	bool habilitar_log = atoi(argv[1]);
+	bool habilitar_impressao = atoi(argv[2]);
+	bool habilitar_arquivo_saida = atoi(argv[3]);
+	register unsigned int suporte_minimo = atoi(argv[4]);
 
-	bool habilitar_log = true;
-	bool habilitar_arquivo_saida = true;
-
-	register unsigned int suporte_minimo = atoi(argv[1]);
-	fstream arquivo_entrada(argv[2]);
-
+	unsigned int n_threads = atoi(argv[6]);
+	fstream *arquivo_entrada = new fstream[n_threads];
+	for (unsigned int i = 0; i < n_threads; ++i) {
+		arquivo_entrada[i].open(argv[5]);
+	}
+	
 	ofstream arquivo_saida("saida_paralelo.data");
 	ofstream arquivo_log("log_paralelo.data");
-	string transacao;
-	unsigned int n_threads = atoi(argv[3]);
-
+	string transacao;	
 	register unsigned tamanhoItemset = 1;
  	map<string,unsigned int> *candidatos = new map<string,unsigned int>;
  	map<string,unsigned int>::iterator it, it_fim;
-
 	register unsigned int frequencia = 0 , it_presente = 0,it2_presente = 0, pos =0, qtd_items;
 	int item;
 	register char *dup = NULL, *token = NULL;
-
+	omp_set_num_threads(n_threads);
  	inicia_relogio();
 
- 	while(getline(arquivo_entrada, transacao)){
+ 	while(getline(arquivo_entrada[0], transacao)){
 		dup = strdup(transacao.c_str());
 		token = strtok(dup," ");
 		while(token) {
@@ -189,64 +188,98 @@ int main(int argc,char *argv[]){
 		free(dup);
 	}
 
-
+	
+	unsigned int max_candidatos = candidatos->size();
 	it_fim = candidatos->end();
-	for(map<string,unsigned int>::iterator it = candidatos->begin() ; it != it_fim;  ) {
-		if(it->second < suporte_minimo) {
-			candidatos->erase(it++);
-		} else{
-			++it;
+	it = candidatos->begin();
+
+	#pragma omp parallel
+	{
+		#pragma omp single
+		{
+			for(unsigned int i = 0  ; i < max_candidatos; i++  ) {
+				// #pragma omp task
+				// {
+					if(it->second < suporte_minimo) {
+						candidatos->erase(it++);
+					} else{
+						++it;
+					}
+				// }
+			}
 		}
-	}
-	cout<<"Programa Paralelo"<<endl;
-	cout<<"Suporte:"<<suporte_minimo<<endl;
-	cout<<"n_Threads:"<<n_threads<<endl;
-	cout<<"Itemset tamanho:"<<tamanhoItemset<<endl;
-	cout<<"Quantidade de novos conjuntos:"<<candidatos->size()<<endl;
-	if(habilitar_log) {
-		arquivo_log << "Suporte:"<<suporte_minimo<<endl;
-		arquivo_log << "n_Threads:"<<n_threads<<endl;
-		arquivo_log << "Itemset tamanho:"<<tamanhoItemset<<endl;
-		arquivo_log << "Quantidade de novos conjuntos: "<<candidatos->size()<<endl;
-	}
-	if(habilitar_arquivo_saida){
-		arquivo_saida << "Suporte minimo:"<<suporte_minimo<<endl;
+		#pragma omp single
+		{
+			cout<<"Programa Paralelo"<<endl;
+			if(habilitar_impressao){
+				cout<<"Suporte:"<<suporte_minimo<<endl;
+				cout<<"n_Threads:"<<n_threads<<endl;
+				cout<<"Itemset tamanho:"<<tamanhoItemset<<endl;
+				cout<<"Quantidade de novos conjuntos:"<<candidatos->size()<<endl;
+			}
+		}
+		#pragma omp single
+		{
+			if(habilitar_log) {
+				arquivo_log << "Suporte:"<<suporte_minimo<<endl;
+				arquivo_log << "n_Threads:"<<n_threads<<endl;
+				arquivo_log << "Itemset tamanho:"<<tamanhoItemset<<endl;
+				arquivo_log << "Quantidade de novos conjuntos: "<<candidatos->size()<<endl;
+			}
+		}
+		#pragma omp single
+		{
+			if(habilitar_arquivo_saida){
+				arquivo_saida << "Suporte minimo:"<<suporte_minimo<<endl;
+			}
+		}
 	}
 	map<string,unsigned int> *novosCandidatos;
-	string conj1, conj2;
-
+	string conj1, conj2,novoCandidato;
+	vector<string> v;
 	while(candidatos->size() > 0) {
-		if(habilitar_arquivo_saida){
+		if(habilitar_arquivo_saida)
 			escreveConjuntoArquivo(candidatos,arquivo_saida,tamanhoItemset);
-		}
+		
 		novosCandidatos = new map<string,unsigned int>;
 		tamanhoItemset++;
-		//lacos para gerar as combinacoes
-		cout<<"Quantidade novos Conjuntos: "<< candidatos->size() <<endl;
-		cout<<"Itemset tamanho: "<<tamanhoItemset<<endl;
-		it_fim = candidatos->end();
-		for(map<string,unsigned int>::iterator it = candidatos->begin() ; it != it_fim ; ++it) {
-			map<string,unsigned int>::iterator itTemp = it;
-			itTemp++;
-			for(map<string,unsigned int>::iterator it2 = itTemp ; it2 != it_fim ; ++it2) {
-				conj1 = it->first; 
-				conj2 = it2->first;
+		
+		if(habilitar_impressao){
+			cout<<"Quantidade novos Conjuntos: "<< candidatos->size() <<endl;
+			cout<<"Itemset tamanho: "<<tamanhoItemset<<endl;
+		}
 
-				arquivo_entrada.clear();
-				arquivo_entrada.seekg(0);
+		
+		for( it = candidatos->begin(); it != candidatos->end(); ++it ) {
+	    	v.push_back( it->first );
+	    }
+	    
+	    unsigned int v_size = v.size();
+	    cout<<"V_size:"<<v_size<<endl;
+	   
+	    for(unsigned int i = 0 ; i < v_size ; i++) {
+	    	conj1 = v[i];
+	    	#pragma omp parallel for private(novoCandidato,qtd_items,item,pos,conj2,transacao,token,dup,it_presente,it2_presente,frequencia)
+	    	for (unsigned int j = i+1; j < v_size; j++) {
+	    		
+				conj2 = v[j];
 
+				int thread_id = omp_get_thread_num();
+				arquivo_entrada[thread_id].clear();
+				arquivo_entrada[thread_id].seekg(0);
+				
 				frequencia = 0;
-				string novoCandidato;
+				
 				if (tamanhoItemset == 2) {
-
-					while(getline(arquivo_entrada, transacao)){
+					//criar um ponteiro de arquivo para cada thread e executar
+					while(getline(arquivo_entrada[thread_id], transacao)) {
 						dup = strdup(transacao.c_str());
 						token = strtok(dup," ");
 						it_presente = it2_presente = 0;
 						while(token) {
-							if(!it_presente && strcmp(it->first.c_str(),token) == 0) 
+							if(!it_presente && strcmp(v[i].c_str(),token) == 0) 
 								it_presente = 1;
-							if(!it2_presente && strcmp(it2->first.c_str(),token) == 0)
+							if(!it2_presente && strcmp(v[j].c_str(),token) == 0)
 								it2_presente = 1;
 							if(it_presente == 1 && it2_presente == 1){
 								frequencia++;
@@ -257,12 +290,12 @@ int main(int argc,char *argv[]){
 						free(dup);
 					}
 
-					novoCandidato = it->first + " " + it2->first;
+					novoCandidato = v[i] + " " + v[j];
 				} else {//tamanhoItemset > 2
-					if(subStrPrincipal(it->first) == subStrPrincipal(it2->first)) {
-						novoCandidato = combinaRotulos(it->first,it2->first,tamanhoItemset);
+					if(subStrPrincipal(v[i]) == subStrPrincipal(v[j])) {
+						novoCandidato = combinaRotulos(v[i],v[j],tamanhoItemset);
 						//frequencia deste conjunto						
-						while(getline(arquivo_entrada, transacao)){
+						while(getline(arquivo_entrada[thread_id], transacao)){
 							dup = strdup(transacao.c_str());
 							token = strtok(dup," ");
 							pos = 0;
@@ -276,22 +309,36 @@ int main(int argc,char *argv[]){
 										break;
 									dup = strdup(transacao.c_str());
 									token = strtok(dup," ");
-								} else {
+								} else
 									token = strtok(NULL," ");
-								}
 							}
 							free(dup);
-							if(qtd_items == tamanhoItemset) {
+							if(qtd_items == tamanhoItemset)
 								frequencia++;
-							}
 						}
 					}
 				}
-				if(frequencia >= suporte_minimo) {
-					novosCandidatos->insert(novosCandidatos->begin(),pair<string,unsigned int>(novoCandidato,frequencia));
+				#pragma omp critical
+				{
+					if(frequencia >= suporte_minimo)
+						novosCandidatos->insert(novosCandidatos->begin(),pair<string,unsigned int>(novoCandidato,frequencia));
 				}
-			}
-		}
+   			}// fim 2 for
+
+   			if(i == 50)break;
+   			// break;
+   			// cout<<"VSF:"<<novosCandidatos->size()<<endl;
+
+   			// #pragma omp master			
+   			// for( map<string,unsigned int>::iterator it = novosCandidatos->begin(); it != novosCandidatos->end(); ++it ) {
+		    // 	cout<<it->first<<endl;
+		    // }
+		    // #pragma omp barrier
+   			
+   			// exit(0);
+   		
+	    }
+	    v.clear();
 		if(tamanhoItemset > 2)
 			novosCandidatos = eliminarSubconjuntosNaoFrequentes(novosCandidatos, candidatos, tamanhoItemset);
 
@@ -299,15 +346,15 @@ int main(int argc,char *argv[]){
 		candidatos = novosCandidatos;
 
 		novosCandidatos = NULL;
-
-		cout<<"Quantidade de conjuntos frequentes: "<<candidatos->size()<<endl<<endl;
+		if(habilitar_impressao)
+			cout<<"Quantidade de conjuntos frequentes: "<<candidatos->size()<<endl<<endl;
 	}
 
 	finaliza_relogio();	
-	if(habilitar_log){
+	if(habilitar_log)
 		arquivo_log << "Tempo de execucao: "<<delta << " segundos" << endl;
-	}
-	arquivo_entrada.close();
+	
+	arquivo_entrada[0].close();
 	arquivo_log.close();
 	arquivo_saida.close();
 	return 0;
